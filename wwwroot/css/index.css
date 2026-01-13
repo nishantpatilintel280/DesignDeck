@@ -1,0 +1,188 @@
+﻿/* Page-specific styles for Index only */
+
+/* Upload wrapper for positioning hints */
+.upload-excel-wrapper {
+    position: relative;
+}
+
+/* Flashcard tooltip overlay (shown near Upload button) */
+.flashcard-overlay {
+    position: absolute;
+    top: -20px;
+    right: 0;
+    z-index: 1050;
+    display: none;
+    pointer-events: none;
+    transform: translateY(-100%);
+}
+
+    .flashcard-overlay.show {
+        display: block;
+    }
+
+.flashcard {
+    background: #fff;
+    border-radius: .5rem;
+    padding: 1rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    max-width: 340px;
+    width: max-content;
+    min-width: 240px;
+    text-align: left;
+    transform: translateY(4px);
+    opacity: 0;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    position: relative;
+    pointer-events: auto;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+    .flashcard.show {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+.flashcard-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #6b7280;
+    transition: color .15s ease;
+}
+
+    .flashcard-close:hover {
+        color: #0f172a;
+    }
+
+/* Arrow pointer under flashcard */
+.flashcard::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    right: 20px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid #fff;
+    filter: drop-shadow(0 2px 3px rgba(15,23,42,0.05));
+}
+
+/* Simple single-row layout */
+#filtersStickyCard {
+    position: sticky;
+    overflow: visible;
+    z-index: 1020;
+}
+
+    #filtersStickyCard .card-body {
+        overflow: visible;
+        padding: 1rem;
+    }
+
+/* Responsive behavior */
+@media (max-width: 991.98px) {
+    /* Stack on tablets and below */
+    #filtersStickyCard .d-flex.flex-wrap {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 1rem !important;
+    }
+
+    .flex-grow-1 {
+        display: none; /* Hide spacer on mobile */
+    }
+
+    .actions-section {
+        justify-content: flex-start !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    #filtersStickyCard .card-body {
+        padding: 0.75rem;
+    }
+
+    .filters-section form {
+        gap: 0.5rem !important;
+    }
+
+    .actions-section {
+        gap: 0.25rem !important;
+    }
+
+    .btn-sm {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .filters-section form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filters-section .d-flex {
+        justify-content: space-between;
+    }
+
+    .actions-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+        .actions-section .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+    .btn-sm {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+    }
+}
+
+/* Ensure proper z-index for dropdowns */
+.form-select:focus,
+.form-select[aria-expanded="true"] {
+    z-index: 1030;
+}
+
+/* Button styling */
+.text-nowrap {
+    white-space: nowrap;
+}
+
+.flex-wrap {
+    flex-wrap: wrap !important;
+}
+
+.flex-shrink-0 {
+    flex-shrink: 0 !important;
+}
+
+/* Table responsive adjustments */
+@media (max-width: 768px) {
+    .table-responsive .btn-sm {
+        min-width: 36px;
+        padding: 0.25rem 0.4rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .table-responsive .btn-sm {
+        min-width: 32px;
+        padding: 0.2rem 0.3rem;
+    }
+
+    /* Make action column narrower on mobile */
+    td[class*="text-center"] .d-flex {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+}

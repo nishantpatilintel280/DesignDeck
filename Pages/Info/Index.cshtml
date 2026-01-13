@@ -1,0 +1,29 @@
+﻿@page
+@model EP.Pages.InfoModel
+@{
+    ViewData["Title"] = "Info page";
+}
+
+@{
+    Layout = "_Layout";
+}
+
+<div class="container mt-5">
+    @* <div class="card shadow-sm"> *@
+        <div class="card-body">
+            <h1 class="card-title text-primary border-bottom pb-2 mb-4">@Model.Title</h1>
+            <p class="card-text">@Model.Description</p>
+
+            <dl class="row">
+                <dt class="col-sm-3">Version:</dt>
+                <dd class="col-sm-9">@Model.Version</dd>
+
+                <dt class="col-sm-3">Author:</dt>
+                <dd class="col-sm-9">@Model.Author</dd>
+            </dl>
+        </div>
+    @* </div> *@
+    <a class="btn btn-primary mt-3" asp-page="/Info/Info-def">Definition of the stage</a>
+    <a class="btn btn-primary mt-3" asp-page="/Info/Info-panel">Help - Internal Panel</a>
+    <a class="btn btn-primary mt-3" asp-page="/Info/Info-dropdown">Help - Dropdown List</a>
+</div>

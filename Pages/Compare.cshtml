@@ -1,0 +1,644 @@
+@page
+@model EP.Pages.CompareModel
+@{
+    ViewData["Title"] = "Compare Panels";
+    Layout = "_Layout";
+}
+
+<link rel="stylesheet" href="~/css/index.css" asp-append-version="true" />
+
+<style>
+    .comparison-table {
+        font-size: 0.875rem;
+    }
+    .comparison-table th {
+        position: sticky;
+        top: 0;
+        background: #f8f9fa;
+        z-index: 10;
+        font-weight: 600;
+    }
+    .comparison-table .spec-label {
+        position: sticky;
+        left: 0;
+        background: #fff;
+        font-weight: 600;
+        z-index: 5;
+        border-right: 2px solid #dee2e6;
+    }
+    .comparison-table thead th.spec-label {
+        z-index: 15;
+        background: #f8f9fa;
+    }
+    .panel-header {
+        min-width: 200px;
+        writing-mode: horizontal-tb;
+    }
+    .design-selection, .panel-selection {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function(){
+            // Restore scroll position if it was saved
+            const savedScrollPos = sessionStorage.getItem('comparePageScrollPos');
+            if (savedScrollPos) {
+                window.scrollTo(0, parseInt(savedScrollPos));
+                sessionStorage.removeItem('comparePageScrollPos');
+            }
+
+            let suppressDesignChange = false;
+            let suppressPanelChange = false;
+
+            function getCurrentPanelFilters() {
+                const feats = [];
+                document.querySelectorAll('input[name="FilterPanelFeatures"][data-current="true"]').forEach(el => {
+                    feats.push(el.value);
+                });
+                return feats;
+            }
+
+            function updateSelectionWithIds(selectedIds) {
+                const platform = document.getElementById('PlatformFilter')?.value || 'PTL';
+                const sku = document.getElementById('SkuFilter')?.value || 'ALL';
+                const params = new URLSearchParams();
+                params.set('Platform', platform);
+                params.set('SKU', sku);
+                (selectedIds || []).forEach(id => params.append('SelectedDesignIds', id));
+                getCurrentPanelFilters().forEach(f => params.append('FilterPanelFeatures', f));
+                window.location.href = '/Compare?' + params.toString();
+            }
+
+            function updateSelection() {
+                const selected = Array.from(document.querySelectorAll('input[name="SelectedDesignIds"]:checked'))
+                    .map(cb => cb.value);
+                updateSelectionWithIds(selected);
+            }
+
+            // Update URL when designs are selected
+            const designCheckboxes = document.querySelectorAll('input[name="SelectedDesignIds"]');
+            designCheckboxes.forEach(cb => {
+                cb.addEventListener('change', function(){
+                    if (suppressDesignChange) return;
+                    // Save scroll position before navigation
+                    sessionStorage.setItem('comparePageScrollPos', window.scrollY);
+                    updateSelection();
+                });
+            });
+
+            // Select all designs (no limit)
+            const selectAllDesignsToggle = document.getElementById('selectAllDesignsToggle');
+            if (selectAllDesignsToggle) {
+                selectAllDesignsToggle.addEventListener('change', function(){
+                    const all = Array.from(document.querySelectorAll('input[name="SelectedDesignIds"]'));
+                    suppressDesignChange = true;
+                    if (this.checked) {
+                        all.forEach(cb => cb.checked = true);
+                        suppressDesignChange = false;
+                        const ids = all.map(cb => cb.value);
+                        sessionStorage.setItem('comparePageScrollPos', window.scrollY);
+                        updateSelectionWithIds(ids);
+                    } else {
+                        all.forEach(cb => cb.checked = false);
+                        suppressDesignChange = false;
+                        sessionStorage.setItem('comparePageScrollPos', window.scrollY);
+                        updateSelectionWithIds([]);
+                    }
+                });
+                // Initialize toggle state
+                const totalDesigns = document.querySelectorAll('input[name="SelectedDesignIds"]').length;
+                const checkedDesigns = document.querySelectorAll('input[name="SelectedDesignIds"]:checked').length;
+                if (totalDesigns > 0 && checkedDesigns === totalDesigns) {
+                    selectAllDesignsToggle.checked = true;
+                }
+            }
+
+            // Update URL when panels are selected
+            const panelCheckboxes = document.querySelectorAll('input[name="SelectedPanelIds"]');
+            panelCheckboxes.forEach(cb => {
+                cb.addEventListener('change', function(){
+                    if (suppressPanelChange) return;
+                    // Save scroll position before form submission
+                    sessionStorage.setItem('comparePageScrollPos', window.scrollY);
+                    const form = document.getElementById('comparisonForm');
+                    if (form) form.submit();
+                });
+            });
+
+            // Select all panels toggle
+            const selectAllPanelsToggle = document.getElementById('selectAllPanelsToggle');
+            if (selectAllPanelsToggle) {
+                selectAllPanelsToggle.addEventListener('change', function(){
+                    const allPanels = Array.from(document.querySelectorAll('input[name="SelectedPanelIds"]'));
+                    suppressPanelChange = true;
+                    if (this.checked) {
+                        allPanels.forEach(cb => cb.checked = true);
+                    } else {
+                        allPanels.forEach(cb => cb.checked = false);
+                    }
+                    suppressPanelChange = false;
+                    sessionStorage.setItem('comparePageScrollPos', window.scrollY);
+                    const form = document.getElementById('comparisonForm');
+                    if (form) form.submit();
+                });
+                // Initialize toggle state for panels
+                const totalPanels = document.querySelectorAll('input[name="SelectedPanelIds"]').length;
+                const checkedPanels = document.querySelectorAll('input[name="SelectedPanelIds"]:checked').length;
+                if (totalPanels > 0 && checkedPanels === totalPanels) {
+                    selectAllPanelsToggle.checked = true;
+                }
+            }
+
+            // Initialize Bootstrap tooltips
+            if (window.bootstrap && document.querySelector('[data-bs-toggle="tooltip"]')) {
+                document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el){
+                    new bootstrap.Tooltip(el, { delay: { show: 0, hide: 0 } });
+                });
+            }
+        });
+    </script>
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Compare Panel Specifications</h1>
+        <a href="/Index" class="btn btn-outline-secondary btn-sm">
+            Back to Designs
+        </a>
+    </div>
+
+    <!-- Step 1: Filter and Select Designs -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Step 1: Filter & Select Designs</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-center mb-3">
+                <div class="col-auto">
+                    <label for="PlatformFilter" class="form-label mb-0">Platform</label>
+                    <select asp-for="Platform" id="PlatformFilter" class="form-select form-select-sm" name="Platform" onchange="this.form.submit()">
+                        <option value="ALL">ALL</option>
+                        <option value="PTL">PTL</option>
+                        <option value="NVL">NVL</option>
+                    </select>
+                </div>
+                @if (Model.Platform == "PTL")
+                {
+                    <div class="col-auto">
+                        <label for="SkuFilter" class="form-label mb-0">SKU</label>
+                        <select asp-for="SKU" id="SkuFilter" class="form-select form-select-sm" name="SKU" onchange="this.form.submit()">
+                            <option value="ALL">ALL</option>
+                            <option value="12Xe">12Xe</option>
+                            <option value="4Xe">4Xe</option>
+                            <option value="404">404</option>
+                        </select>
+                    </div>
+                }
+                else if (Model.Platform == "NVL")
+                {
+                    <div class="col-auto">
+                        <label for="SkuFilter" class="form-label mb-0">SKU</label>
+                        <select asp-for="SKU" id="SkuFilter" class="form-select form-select-sm" name="SKU" onchange="this.form.submit()">
+                            <option value="ALL">ALL</option>
+                            <option value="NVL-S">NVL-S</option>
+                            <option value="NVL-G">NVL-G</option>
+                            <option value="NVL-M">NVL-M</option>
+                        </select>
+                    </div>
+                }
+            </form>
+
+            <div class="design-selection border rounded p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">Select Designs to Compare</h6>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="selectAllDesignsToggle">
+                        <label class="form-check-label" for="selectAllDesignsToggle">Select all</label>
+                    </div>
+                </div>
+                @if (Model.AllDesigns.Count == 0)
+                {
+                    <p class="text-muted">No designs found for selected filters.</p>
+                }
+                else
+                {
+                    <div class="row g-2">
+                        @foreach (var design in Model.AllDesigns)
+                        {
+                            <div class="col-md-6 col-lg-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           name="SelectedDesignIds" 
+                                           value="@design.Id" 
+                                           id="design-@design.Id"
+                                           @(Model.SelectedDesignIds.Contains(design.Id) ? "checked" : "")>
+                                    <label class="form-check-label" for="design-@design.Id">
+                                        <strong>@design.Name</strong><br/>
+                                        <small class="text-muted">@design.Platform · @design.SKU · @design.OEM</small>
+                                    </label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Select Panels from Selected Designs -->
+    @if (Model.SelectedDesigns.Count > 0)
+    {
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Step 2: Select Panels to Compare</h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#panelFilterModal">Filter Panels</button>
+                    @if (Model.FilterPanelFeatures != null && Model.FilterPanelFeatures.Count > 0)
+                    {
+                        var url = Url.Page("/Compare", new { Platform = Model.Platform, SKU = Model.SKU, SelectedDesignIds = Model.SelectedDesignIds });
+                        <a class="btn btn-outline-warning btn-sm" href="@url" title="Clear panel filters">Clear filters</a>
+                    }
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Hidden current filters for JS to preserve on design selection -->
+                <div style="display:none">
+                    @if (Model.FilterPanelFeatures != null)
+                    {
+                        foreach (var f in Model.FilterPanelFeatures)
+                        {
+                            <input type="hidden" name="FilterPanelFeatures" value="@f" data-current="true" />
+                        }
+                    }
+                </div>
+
+                <form method="get" id="comparisonForm">
+                    @foreach (var id in Model.SelectedDesignIds)
+                    {
+                        <input type="hidden" name="SelectedDesignIds" value="@id" />
+                    }
+                    <input type="hidden" name="Platform" value="@Model.Platform" />
+                    <input type="hidden" name="SKU" value="@Model.SKU" />
+                    @if (Model.FilterPanelFeatures != null)
+                    {
+                        foreach (var f in Model.FilterPanelFeatures)
+                        {
+                            <input type="hidden" name="FilterPanelFeatures" value="@f" />
+                        }
+                    }
+
+                    <div class="d-flex justify-content-end align-items-center mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="selectAllPanelsToggle">
+                            <label class="form-check-label" for="selectAllPanelsToggle">Select all panels</label>
+                        </div>
+                    </div>
+
+                    <div class="panel-selection">
+                        @foreach (var design in Model.SelectedDesigns)
+                        {
+                            if (Model.PanelsByDesign.TryGetValue(design.Id, out var panels) && panels?.Count > 0)
+                            {
+                                <div class="mb-4">
+                                    <h6 class="text-primary">
+                                        @design.Name
+                                        <small class="text-muted">(@design.Platform · @design.SKU)</small>
+                                    </h6>
+                                    <div class="row g-2 ms-3">
+                                        @foreach (var panel in panels)
+                                        {
+                                            <div class="col-md-6">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" 
+                                                           type="checkbox" 
+                                                           name="SelectedPanelIds" 
+                                                           value="@panel.panel_id" 
+                                                           id="panel-@panel.panel_id"
+                                                           @(Model.SelectedPanelIds.Contains(panel.panel_id) ? "checked" : "")>
+                                                    <label class="form-check-label" for="panel-@panel.panel_id">
+                                                        <strong>@panel.panel_vendor</strong> / @panel.tcon_vendor
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+
+                    @if (Model.PanelsByDesign.Values.Any(p => p.Count > 0))
+                    {
+                        <div class="text-end mt-3">
+                            <button type="submit" class="btn btn-primary">Compare Selected Panels</button>
+                        </div>
+                    }
+                </form>
+            </div>
+        </div>
+    }
+
+    <!-- Step 3: Comparison Table -->
+    @if (Model.ComparisonData.Count > 0)
+    {
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Panel Specifications Comparison</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover comparison-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="spec-label">Specification</th>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <th class="panel-header text-center">
+                                        <div class="fw-bold text-primary">@item.Design.Name</div>
+                                        <div class="small text-muted">@item.Panel.panel_vendor / @item.Panel.tcon_vendor</div>
+                                        <div class="small">
+                                            <span class="badge bg-light text-dark">@item.Design.Platform</span>
+                                            <span class="badge bg-light text-dark">@item.Design.SKU</span>
+                                        </div>
+                                    </th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Basic Info -->
+                            <tr class="table-secondary">
+                                <td class="spec-label" colspan="@(Model.ComparisonData.Count + 1)"><strong>Basic Information</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="spec-label">Panel Part Number</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.Panel_Part_Number ?? "N/A")</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">TCon Part Number</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.TCon_Part_Number ?? "N/A")</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">Release Year</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.Panel_TCon_Release_Year ?? "N/A")</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">HW Version</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.Panel_HW_Version ?? "N/A")</td>
+                                }
+                            </tr>
+
+                            <!-- Display Specs -->
+                            <tr class="table-secondary">
+                                <td class="spec-label" colspan="@(Model.ComparisonData.Count + 1)"><strong>Display Specifications</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="spec-label">Resolution</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.Resolution ?? "N/A")</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">Screen Size (inch)</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.Screen_Size_Inch ?? "N/A")</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">Refresh Rate Min (Hz)</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.RR_Min_Hz ?? "N/A")</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">Refresh Rate Max (Hz)</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.RR_Max_Hz ?? "N/A")</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">Aspect Ratio</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.Aspect_Ratio ?? "N/A")</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">Color Depth</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.Color_Depth ?? "N/A")</td>
+                                }
+                            </tr>
+
+                            <!-- Feature Support -->
+                            <tr class="table-secondary">
+                                <td class="spec-label" colspan="@(Model.ComparisonData.Count + 1)"><strong>Feature Support</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="spec-label">PSR1 Supported</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(item.Spec?.PSR1_Supported))
+                                        {
+                                            <span class="badge @(item.Spec.PSR1_Supported.Contains("Yes", StringComparison.OrdinalIgnoreCase) ? "bg-success" : "bg-secondary")">
+                                                @item.Spec.PSR1_Supported
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">N/A</span>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">PSR2 Supported</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(item.Spec?.PSR2_Supported))
+                                        {
+                                            <span class="badge @(item.Spec.PSR2_Supported.Contains("Yes", StringComparison.OrdinalIgnoreCase) ? "bg-success" : "bg-secondary")">
+                                                @item.Spec.PSR2_Supported
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">N/A</span>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">HDR Supported</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(item.Spec?.HDR_Supported))
+                                        {
+                                            <span class="badge @(item.Spec.HDR_Supported.Contains("Yes", StringComparison.OrdinalIgnoreCase) ? "bg-success" : "bg-secondary")">
+                                                @item.Spec.HDR_Supported
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">N/A</span>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">VRR Supported</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(item.Spec?.VRR_Supported))
+                                        {
+                                            <span class="badge @(item.Spec.VRR_Supported.Contains("Yes", StringComparison.OrdinalIgnoreCase) ? "bg-success" : "bg-secondary")">
+                                                @item.Spec.VRR_Supported
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">N/A</span>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">VDSC Version</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.VDSC_Version ?? "N/A")</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">xPST Supported</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.xPST_Supported ?? "N/A")</td>
+                                }
+                            </tr>
+
+                            <!-- Color & Brightness -->
+                            <tr class="table-secondary">
+                                <td class="spec-label" colspan="@(Model.ComparisonData.Count + 1)"><strong>Color & Brightness</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="spec-label">sRGB Coverage</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.Color_Gamut_sRGB ?? "N/A")</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">Max Brightness (Nits)</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.Max_Brightness_Nits ?? "N/A")</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">Backlight Source</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.Backlight_Light_Source ?? "N/A")</td>
+                                }
+                            </tr>
+
+                            <!-- Power -->
+                            <tr class="table-secondary">
+                                <td class="spec-label" colspan="@(Model.ComparisonData.Count + 1)"><strong>Power Consumption</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="spec-label">Total Power</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.Total_Power_Consumption ?? "N/A")</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="spec-label">Backlight Power</td>
+                                @foreach (var item in Model.ComparisonData)
+                                {
+                                    <td>@(item.Spec?.Backlight_Power_Consumption ?? "N/A")</td>
+                                }
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else if (Model.SelectedDesigns.Count > 0)
+    {
+        <div class="alert alert-info">
+            Please select at least one panel from the designs above to view the comparison.
+        </div>
+    }
+</div>
+
+@if (Model.SelectedDesigns.Count > 0)
+{
+    <!-- Modal: Panel Filter (same feature set as Details master filter) -->
+    <div class="modal fade" id="panelFilterModal" tabindex="-1" aria-labelledby="panelFilterModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="panelFilterModalLabel">Filter Panels by Features</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="get">
+                    <div class="modal-body">
+                        @foreach (var id in Model.SelectedDesignIds)
+                        {
+                            <input type="hidden" name="SelectedDesignIds" value="@id" />
+                        }
+                        <input type="hidden" name="Platform" value="@Model.Platform" />
+                        <input type="hidden" name="SKU" value="@Model.SKU" />
+
+                        <div class="col-12">
+                            <label class="form-label d-block">Panel Features</label>
+                            <div class="row row-cols-2 g-2">
+                                @foreach (var feature in new[]{ "PSR1_Supported","PSR2_Supported","PSR2_ET_Supported","HDR_Supported","VRR_Supported","VDSC_Version","Seamless_Drrs","xPST_Supported","OPST_ELP","DE_Early_Wake","EPSM60","EG_Endurance_Gaming" })
+                                {
+                                    var isChecked = Model.FilterPanelFeatures != null && Model.FilterPanelFeatures.Contains(feature);
+                                    <div class="col">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="FilterPanelFeatures" value="@feature" id="feat-@feature" @(isChecked ? "checked" : null) />
+                                            <label class="form-check-label" for="feat-@feature">@feature.Replace("_"," ")</label>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Apply</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}

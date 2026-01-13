@@ -1,0 +1,34 @@
+﻿/*body {
+}*/
+
+/* Add this to your CSS file */
+/*.tab-pane:not(.active) .accordion-collapse {
+    display: none !important;
+    height: 0 !important;
+}
+
+.tab-pane:not(.active) .accordion-button {*/
+    /* Ensure collapsed state for inactive tabs */
+/*}
+
+.tab-pane.active .accordion-collapse:not(.show) {
+    display: none;
+    height: 0;
+}*/
+
+/* Disabled button styling for clarity */
+button:disabled,
+.btn:disabled,
+button[disabled],
+.btn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(40%);
+}
+
+/* Specific tweak for outline buttons to reduce contrast when disabled */
+.btn-outline-info:disabled {
+    color: #6c757d !important; /* muted text */
+    border-color: #bfc6cd !important; /* lighter border */
+    background-color: transparent !important;
+}
