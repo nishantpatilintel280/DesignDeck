@@ -1,0 +1,243 @@
+@page
+@model EP.Pages.PostMortemModel
+@{
+    ViewData["Title"] = "Post-Mortem Panel Configuration";
+    Layout = "_Layout";
+}
+
+<link rel="stylesheet" href="~/css/index.css" asp-append-version="true" />
+
+<style>
+    .spec-table {
+        font-size: 0.875rem;
+    }
+    .spec-table th {
+        position: sticky;
+        top: 0;
+        background: #f8f9fa;
+        z-index: 10;
+        font-weight: 600;
+    }
+    .spec-label {
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .enabled-input {
+        width: 100%;
+        min-width: 100px;
+    }
+    .support-value {
+        color: #6c757d;
+        font-style: italic;
+    }
+    .modified-indicator {
+        color: #0d6efd;
+        cursor: help;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function(){
+            // Initialize tooltips
+            if (window.bootstrap && document.querySelector('[data-bs-toggle="tooltip"]')) {
+                document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el){
+                    new bootstrap.Tooltip(el, { delay: { show: 0, hide: 0 }, html: true });
+                });
+            }
+
+            // Auto-populate Enabled values from Support values on load
+            document.querySelectorAll('.support-value-hidden').forEach(function(input) {
+                const supportValue = input.value;
+                const enabledInput = input.closest('td').nextElementSibling?.querySelector('.enabled-input');
+                if (enabledInput && !enabledInput.value) {
+                    enabledInput.value = supportValue || '';
+                }
+            });
+        });
+    </script>
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3">
+                <i class="bi bi-wrench-adjustable-circle me-2"></i>Post-Mortem Configuration
+            </h1>
+            @if (Model.Design != null)
+            {
+                <p class="text-muted mb-0">
+                    <strong>@Model.Design.Name</strong> · @Model.Design.Platform · @Model.Design.SKU
+                </p>
+                <p class="text-muted small">
+                    FCS Date: <strong>@(Model.FcsDate ?? "Not Set")</strong>
+                    @if (Model.IsFcsPassed)
+                    {
+                        <span class="badge bg-success ms-2">
+                            <i class="bi bi-check-circle me-1"></i>FCS Passed - Editing Enabled
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-warning ms-2">
+                            <i class="bi bi-clock me-1"></i>Before FCS - View Only
+                        </span>
+                    }
+                </p>
+            }
+        </div>
+        <div>
+            <a href="/Index?DesignId=@Model.DesignId" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Back to Index
+            </a>
+            <a href="/Details?DesignId=@Model.DesignId" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-eye me-1"></i>View Details
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (!Model.IsFcsPassed)
+    {
+        <div class="alert alert-warning">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Note:</strong> The FCS date has not passed yet. You can view current values but cannot make changes until after FCS.
+        </div>
+    }
+
+    @if (Model.Design == null)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Design not found.
+        </div>
+    }
+    else if (Model.PanelsData.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            No panels found for this design.
+        </div>
+    }
+    else
+    {
+        <form method="post" asp-page-handler="SaveOverrides">
+            <input type="hidden" name="DesignId" value="@Model.DesignId" />
+            
+            <!-- Panel Specifications Table -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-sliders me-2"></i>Panel Feature Configuration (Support vs Enabled)
+                    </h5>
+                    <small>Support = Hardware capability (from panel vendor) | Enabled = Runtime configuration (can be changed post-FCS)</small>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover spec-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="spec-label" rowspan="2">Specification</th>
+                                    @foreach (var (panel, spec, overrides) in Model.PanelsData)
+                                    {
+                                        <th colspan="2" class="text-center">
+                                            <div class="fw-bold">@panel.panel_vendor / @panel.tcon_vendor</div>
+                                            <div class="small text-muted">Panel ID: @panel.panel_id</div>
+                                        </th>
+                                    }
+                                </tr>
+                                <tr>
+                                    @foreach (var _ in Model.PanelsData)
+                                    {
+                                        <th class="text-center bg-light">
+                                            <i class="bi bi-bookmark me-1"></i>Support
+                                            <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Hardware capability from panel vendor (read-only)"></i>
+                                        </th>
+                                        <th class="text-center bg-success bg-opacity-10">
+                                            <i class="bi bi-toggle-on me-1"></i>Enabled
+                                            <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Runtime configuration (editable post-FCS)"></i>
+                                        </th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var field in PostMortemModel.EditableSpecFields)
+                                {
+                                    var fieldDisplay = field.Replace("_", " ");
+                                    <tr>
+                                        <td class="spec-label">@fieldDisplay</td>
+                                        @foreach (var (panel, spec, overrides) in Model.PanelsData)
+                                        {
+                                            var supportValue = spec != null ? 
+                                                typeof(PanelSpec).GetProperty(field)?.GetValue(spec)?.ToString() : null;
+                                            var hasOverride = overrides.ContainsKey(field);
+                                            var enabledValue = hasOverride ? overrides[field] : supportValue;
+                                            
+                                            <!-- Support Column (Read-only) -->
+                                            <td class="text-center bg-light">
+                                                <span class="support-value">@(supportValue ?? "N/A")</span>
+                                            </td>
+                                            
+                                            <!-- Enabled Column (Editable) -->
+                                            <td class="text-center">
+                                                <div class="d-flex align-items-center justify-content-center gap-1">
+                                                    <!-- Simple name arrays - ASP.NET Core will bind in order -->
+                                                    <input type="hidden" name="PanelIds" value="@panel.panel_id" />
+                                                    <input type="hidden" name="SpecFields" value="@field" />
+                                                    <input type="text" 
+                                                           name="EnabledValues" 
+                                                           class="form-control form-control-sm enabled-input @(hasOverride ? "border-primary" : "")" 
+                                                           value="@enabledValue"
+                                                           @(!Model.IsFcsPassed ? "readonly" : "")
+                                                           placeholder="@supportValue"
+                                                           data-panel-id="@panel.panel_id"
+                                                           data-spec-field="@field" />
+                                                    @if (hasOverride)
+                                                    {
+                                                        <i class="bi bi-pencil-square modified-indicator" 
+                                                           data-bs-toggle="tooltip" 
+                                                           title="Modified after FCS"></i>
+                                                    }
+                                                </div>
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @if (Model.IsFcsPassed)
+                {
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Changes will be tracked with timestamp and user information.
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save me-1"></i>Save Changes
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </form>
+    }
+</div>

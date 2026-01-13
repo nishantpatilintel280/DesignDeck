@@ -1,0 +1,122 @@
+﻿@page
+@model EP.Pages.First_PageModel
+@{
+    Layout = "_Layout";
+}
+
+@functions {
+    public string CssClass(string val)
+    {
+        return string.IsNullOrWhiteSpace(val) || val == null ? "not-populated" : "populated";
+    }
+
+    public string CssClassBool(bool val)
+    {
+        return val ? "populated" : "not-populated";
+    }
+
+    public string CssClassInt(int val)
+    {
+        return val >= 0 ? "populated" : "not-populated";
+    }
+}
+
+
+
+<div class="text-center">
+
+    <form method="post">
+        <button type="submit" asp-page-handler="Parse">Parse</button>
+    </form>
+
+    @if (Model.extInfo != null)
+    {
+        <h3>Panel Capabilities</h3>
+        <ul>
+            <li class="@CssClass(Model.extInfo.PanelPortNumber)">Panel Port Number: @Model.extInfo.PanelPortNumber</li>
+            <li class="@CssClass(Model.extInfo.EdidVersion)">EDID Version: @Model.extInfo.EdidVersion</li>
+            <li class="@CssClass(Model.extInfo.Resolution)">Resolution: @Model.extInfo.Resolution</li>
+            <li class="@CssClass(Model.extInfo.RR_Min_Hz)">RR Min Hz: @Model.extInfo.RR_Min_Hz</li>
+            <li class="@CssClass(Model.extInfo.RR_Max_Hz)">RR Max Hz: @Model.extInfo.RR_Max_Hz</li>
+            <li class="@CssClass(Model.extInfo.Aspect_Ratio)">Aspect Ratio: @Model.extInfo.Aspect_Ratio</li>
+            <li class="@CssClass(Model.extInfo.Htotal)">Htotal: @Model.extInfo.Htotal</li>
+            <li class="@CssClass(Model.extInfo.Vtotal)">Vtotal: @Model.extInfo.Vtotal</li>
+            <li class="@CssClass(Model.extInfo.Screen_Size_Inch)">Screen Size (inch): @Model.extInfo.Screen_Size_Inch</li>
+            <li class="@CssClass(Model.extInfo.Color_Depth)">Color Depth: @Model.extInfo.Color_Depth</li>
+            <li class="@CssClass(Model.extInfo.FRC)">FRC: @Model.extInfo.FRC</li>
+            <li class="@CssClass(Model.extInfo.Data_Lane_Count)">Data Lane Count: @Model.extInfo.Data_Lane_Count</li>
+            <li class="@CssClass(Model.extInfo.Data_Link_Rate)">Data Link Rate: @Model.extInfo.Data_Link_Rate</li>
+        </ul>
+
+        <h3>Feature Support</h3>
+        <ul>
+            <li class="@CssClassBool(Model.extInfo.PSR1_Supported)">PSR1 Supported: @(Model.extInfo.PSR1_Supported ? "Yes" : "")</li>
+            <li class="@CssClassBool(Model.extInfo.PSR2_Supported)">PSR2 Supported: @(Model.extInfo.PSR2_Supported ? "Yes" : "")</li>
+            <li class="@CssClassBool(Model.extInfo.PSR2_ET_Supported)">PSR2 + ET Supported: @(Model.extInfo.PSR2_ET_Supported ? "Yes" : "")</li>
+            <li class="@CssClass(Model.extInfo.Intel_LRR_Version)">Intel LRR Version: @Model.extInfo.Intel_LRR_Version</li>
+            <li class="@CssClassBool(Model.extInfo.HDR_Supported)">HDR Supported: @(Model.extInfo.HDR_Supported ? "Yes" : "")</li>
+            <li class="@CssClassBool(Model.extInfo.VRR_Supported)">VRR Supported: @(Model.extInfo.VRR_Supported ? "Yes" : "")</li>
+            <li class="@CssClass(Model.extInfo.VDSC_Version)">VDSC Version: @Model.extInfo.VDSC_Version</li>
+            <li class="@CssClass(Model.extInfo.CoG_MSO)">CoG / CoG+ MSO: @Model.extInfo.CoG_MSO</li>
+            <li class="@CssClassBool(Model.extInfo.IIDT_UBRR)">IIDT UBRR: @(Model.extInfo.IIDT_UBRR ? "Yes" : "")</li>
+            <li class="@CssClass(Model.extInfo.Camera_Sensor_For_UBRR)">Camera Sensor for UBRR: @Model.extInfo.Camera_Sensor_For_UBRR</li>
+            <li class="@CssClassBool(Model.extInfo.Seamless_Drrs)">Seamless DRRS: @(Model.extInfo.Seamless_Drrs ? "Yes" : "")</li>
+            <li class="@CssClassBool(Model.extInfo.xPST_Supported)">xPST Supported: @(Model.extInfo.xPST_Supported ? "Yes" : "")</li>
+            <li class="@CssClassInt(Model.extInfo.xPST_Level)">xPST Level: @(Model.extInfo.xPST_Level >= 0 ? Model.extInfo.xPST_Level.ToString() : "")</li>
+            <li class="@CssClassBool(Model.extInfo.OPST_ELP)">OPST + ELP: @(Model.extInfo.OPST_ELP ? "Yes" : "")</li>
+            <li class="@CssClassBool(Model.extInfo.DE_Early_Wake)">DE Early Wake: @(Model.extInfo.DE_Early_Wake ? "Yes" : "")</li>
+            <li class="@CssClassBool(Model.extInfo.EPSM60)">EPSM60: @(Model.extInfo.EPSM60 ? "Yes" : "")</li>
+            <li class="@CssClassBool(Model.extInfo.EG_Endurance_Gaming)">Endurance Gaming (EG): @(Model.extInfo.EG_Endurance_Gaming ? "Yes" : "")</li>
+            <li class="@CssClass(Model.extInfo.EDP1_5_Panel_Replay)">EDP1.5 Panel Replay: @(Model.extInfo.EDP1_5_Panel_Replay)</li>
+            <li class="@CssClass(Model.extInfo.EDP1_5_PR_ET)">EDP1.5 PR + ET: @(Model.extInfo.EDP1_5_PR_ET)</li>
+            <li class="@CssClassBool(Model.extInfo.EDP1_5_CMRR)">EDP1.5 CMRR: @(Model.extInfo.EDP1_5_CMRR ? "Yes" : "")</li>
+            <li class="@CssClassBool(Model.extInfo.EDP1_5_Periodic_ASSDP)">EDP1.5 Periodic ASSDP: @(Model.extInfo.EDP1_5_Periodic_ASSDP ? "Yes" : "")</li>
+            <li class="@CssClassBool(Model.extInfo.EDP1_5_LOBF)">EDP1.5 LOBF: @(Model.extInfo.EDP1_5_LOBF ? "Yes" : "")</li>
+            <li class="@CssClass(Model.extInfo.Other_Features)">Other Features: @Model.extInfo.Other_Features</li>
+        </ul>
+
+        <h3>Panel Color Gamut and Backlight Details</h3>
+        <ul>
+            <li class="@CssClass(Model.extInfo.Color_Gamut_sRGB)">Color Gamut sRGB %: @Model.extInfo.Color_Gamut_sRGB</li>
+            <li class="@CssClass(Model.extInfo.Color_Gamut_DCI_P3)">Color Gamut DCI-P3 %: @Model.extInfo.Color_Gamut_DCI_P3</li>
+            <li class="@CssClass(Model.extInfo.Color_Gamut_AdobeRGB)">Color Gamut Adobe RGB %: @Model.extInfo.Color_Gamut_AdobeRGB</li>
+            <li class="@CssClass(Model.extInfo.Color_Gamut_NTSC)">Color Gamut NTSC %: @Model.extInfo.Color_Gamut_NTSC</li>
+            <li class="@CssClass(Model.extInfo.Max_Brightness_Nits)">Max Brightness (Nits): @Model.extInfo.Max_Brightness_Nits</li>
+            <li class="@CssClass(Model.extInfo.Backlight_Light_Source)">Backlight Light Source: @Model.extInfo.Backlight_Light_Source</li>
+            <li class="@CssClass(Model.extInfo.Dimming_Control)">Dimming Control: @Model.extInfo.Dimming_Control</li>
+            <li class="@CssClass(Model.extInfo.Backlight_Control)">Backlight Control: @Model.extInfo.Backlight_Control</li>
+            <li class="@CssClass(Model.extInfo.Brightness_Precision_Bits)">Brightness Precision (bits): @Model.extInfo.Brightness_Precision_Bits</li>
+        </ul>
+
+        <h3>Panel Card and TCON Details</h3>
+        <ul>
+            <li class="@CssClass(Model.extInfo.Panel_Vendor)">Panel Vendor: @Model.extInfo.Panel_Vendor</li>
+            <li class="@CssClass(Model.extInfo.Panel_Part_Number)">Panel Part Number: @Model.extInfo.Panel_Part_Number</li>
+            <li class="@CssClass(Model.extInfo.TCon_Vendor)">TCON Vendor: @Model.extInfo.TCon_Vendor</li>
+            <li class="@CssClass(Model.extInfo.TCon_Part_Number)">TCON Part Number: @Model.extInfo.TCon_Part_Number</li>
+            <li class="@CssClass(Model.extInfo.Panel_TCon_Release_Year)">Panel TCON Release Year: @Model.extInfo.Panel_TCon_Release_Year</li>
+            <li class="@CssClass(Model.extInfo.Panel_HW_Version)">Panel HW Version: @Model.extInfo.Panel_HW_Version</li>
+        </ul>
+
+        <h3>Touch Support and Interface Details</h3>
+        <ul>
+            <li class="@CssClassBool(Model.extInfo.Touch_Host_Controller)">Touch Host Controller (I2C): @(Model.extInfo.Touch_Host_Controller ? "Yes" : "")</li>
+            <li class="@CssClass(Model.extInfo.Touch_Screen_or_Pad)">Touch Screen or Pad: @Model.extInfo.Touch_Screen_or_Pad</li>
+            <li class="@CssClass(Model.extInfo.Touch_Host_Controller_Vendor)">Touch Host Controller Vendor: @Model.extInfo.Touch_Host_Controller_Vendor</li>
+            <li class="@CssClassBool(Model.extInfo.Touch_Support)">Touch Support: @(Model.extInfo.Touch_Support ? "Yes" : "")</li>
+            <li class="@CssClass(Model.extInfo.Touch_Type)">Touch Type: @Model.extInfo.Touch_Type</li>
+            <li class="@CssClass(Model.extInfo.Touch_Interface)">Touch Interface: @Model.extInfo.Touch_Interface</li>
+            <li class="@CssClass(Model.extInfo.Stylus_Protocol)">Stylus Protocol: @Model.extInfo.Stylus_Protocol</li>
+        </ul>
+
+        <h3>Panel and Supply Consumption Details</h3>
+        <ul>
+            <li class="@CssClass(Model.extInfo.Backlight_Power_Consumption)">Backlight Power Consumption: @Model.extInfo.Backlight_Power_Consumption</li>
+            <li class="@CssClass(Model.extInfo.Data_Logic_Power_Consumption)">Data Logic Power Consumption: @Model.extInfo.Data_Logic_Power_Consumption</li>
+            <li class="@CssClass(Model.extInfo.Total_Power_Consumption)">Total Power Consumption: @Model.extInfo.Total_Power_Consumption</li>
+            <li class="@CssClass(Model.extInfo.Panel_DC_Voltage)">Panel DC Voltage: @Model.extInfo.Panel_DC_Voltage</li>
+            <li class="@CssClass(Model.extInfo.VBatt_POL)">VBatt POL: @Model.extInfo.VBatt_POL</li>
+        </ul>
+    }
+
+</div>

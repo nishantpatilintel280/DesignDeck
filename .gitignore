@@ -1,0 +1,15 @@
+# Build artifacts
+bin/
+obj/
+
+# IDE
+.vs/
+*.suo
+*.user
+*.userprefs
+
+# Logs
+*.log
+
+# Client libs (if downloaded locally)
+wwwroot/lib/

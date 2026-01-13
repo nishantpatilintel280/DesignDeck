@@ -1,0 +1,67 @@
+﻿@page
+@model EP.Pages.Info_defModel
+@{
+    ViewData["Title"] = "Info-def page";
+}
+
+@{
+    Layout = "_Layout";
+}
+<div>
+    <table class="table table-striped table-bordered mt-4">
+        <thead class="table-dark">
+            <tr>
+                <th>OEM</th>
+                <th>Phase Acronyms</th>
+                <th>Phase Definition</th>
+                <th>Comments</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="align-middle" rowspan="8">HP</td>
+                <td>DB</td>
+                <td>Design Board</td>
+                <td>
+                    Basic Test (include GFX)
+                    No stress in this stage
+                </td>
+            </tr>
+            <tr>
+                <td>SI</td>
+                <td>System Integration</td>
+                <td>GFX main validation cycle, in cluding stress test</td>
+            </tr>
+            <tr>
+                <td>PV</td>
+                <td>Production validation</td>
+                <td>GFX main validation cycle, in cluding stress test & WHQL test</td>
+            </tr>
+            <tr>
+                <td>CFR</td>
+                <td>Code Freeze Ready</td>
+                <td>A check point of driver but driver change is acceptable [HP corp only]</td>
+            </tr>
+            <tr>
+                <td>PLD</td>
+                <td>Project Lock Down</td>
+                <td>PLD - 1WW should have the PV driver for production. (PLD - 1WW should be the HP cons driver lock down day) [HP cons only]</td>
+            </tr>
+            <tr>
+                <td>CFZ</td>
+                <td>Code Freeze</td>
+                <td>Image lock down (HP corp driver lock down day)</td>
+            </tr>
+            <tr>
+                <td>RTM</td>
+                <td>Ready to manufacte</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>RTP</td>
+                <td>Ready to production</td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+</div>

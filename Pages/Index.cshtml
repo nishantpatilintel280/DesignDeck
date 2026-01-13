@@ -1,0 +1,740 @@
+﻿@page
+@model EP.Pages.IndexModel
+@{
+    ViewData["Title"] = "Designs";
+    Layout = "_Layout";
+    var showUploadHint = TempData["ShowUploadExcelHint"] != null;
+    bool disableMyDesigns = Model.CurrentRole == 3 || Model.CurrentRole == 4 || Model.CurrentRole == 5;
+}
+<link rel="stylesheet" href="~/css/index.css" asp-append-version="true" />
+
+@section Scripts {
+    <script src="~/js/index.js" asp-append-version="true"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function(){
+            var selectAll = document.getElementById('selectAllDesigns');
+            if (selectAll) {
+                selectAll.addEventListener('change', function(){
+                    document.querySelectorAll('input[name="SelectedDesignIds"]').forEach(function(cb){ cb.checked = selectAll.checked; });
+                });
+            }
+
+            var stickyCard = document.getElementById('filtersStickyCard');
+            var navbar = document.querySelector('header.sticky-top');
+            function updateStickyOffset(){
+                if (stickyCard && navbar) {
+                    var h = navbar.offsetHeight || 0;
+                    stickyCard.style.top = h + 'px';
+                }
+            }
+            updateStickyOffset();
+            window.addEventListener('resize', updateStickyOffset);
+
+            const nameInput = document.getElementById('NewDesignName');
+            const form = nameInput ? nameInput.closest('form') : null;
+            
+            const platformSelect = document.getElementById('NewPlatform');
+            const dlPtl = document.getElementById('AllowedNamesListPTL');
+            const dlNvl = document.getElementById('AllowedNamesListNVL');
+            function applyDatalistForPlatform(){
+                if (!platformSelect || !nameInput) return;
+                const p = (platformSelect.value || '').toUpperCase();
+                if (p === 'NVL' && dlNvl){
+                    nameInput.setAttribute('list', 'AllowedNamesListNVL');
+                } else if (dlPtl){
+                    nameInput.setAttribute('list', 'AllowedNamesListPTL');
+                }
+            }
+            if (platformSelect){
+                platformSelect.addEventListener('change', applyDatalistForPlatform);
+                applyDatalistForPlatform();
+            }
+
+            // Initialize Bootstrap tooltips with zero show delay for immediate hover display
+            if (window.bootstrap && document.querySelector('[data-bs-toggle="tooltip"]')) {
+                document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el){
+                    new bootstrap.Tooltip(el, { delay: { show: 0, hide: 0 }, html: true });
+                });
+            }
+        });
+    </script>
+}
+
+<div class="container-fluid py-5" data-model-platform="@Model.Platform" data-model-sku="@Model.SKU">
+    <!-- Filter + Action Card -->
+    <div id="filtersStickyCard" class="card mb-2 sticky-top shadow-sm" style="z-index: 1020;">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <!-- Filters Section -->
+                <div class="filters-section d-flex flex-wrap align-items-center gap-2">
+                    <form id="filterForm" method="get" class="d-flex flex-wrap gap-2 align-items-center">
+                        <input type="hidden" name="Scope" value="@Model.Scope" />
+
+                        <!-- Platform filter -->
+                        <div class="d-flex align-items-center gap-1">
+                            <label class="form-label mb-0 text-nowrap" for="PlatformFilter">
+                                <i class="bi bi-cpu me-1"></i>Platform
+                            </label>
+                            <select asp-for="Platform" id="PlatformFilter" class="form-select form-select-sm"
+                                    style="width: 100px;" name="Platform" data-bs-toggle="tooltip" title="Filter by Platform">
+                                <option value="ALL">ALL</option>
+                                <option value="NVL">NVL</option>
+                                <option value="PTL">PTL</option>
+                            </select>
+                        </div>
+
+                        @if (Model.Platform == "PTL")
+                        {
+                            <!-- SKU filter for PTL -->
+                            <div class="d-flex align-items-center gap-1">
+                                <label class="form-label mb-0 text-nowrap" for="SkuFilter">
+                                    <i class="bi bi-tag me-1"></i>SKU
+                                </label>
+                                <select asp-for="SKU" id="SkuFilter" class="form-select form-select-sm"
+                                        style="width: 100px;" name="SKU" data-bs-toggle="tooltip" title="Filter by SKU">
+                                    <option value="ALL">ALL</option>
+                                    <option value="12Xe" selected="@(Model.SKU == "12Xe")">12Xe</option>
+                                    <option value="4Xe" selected="@(Model.SKU == "4Xe")">4Xe</option>
+                                    <option value="404" selected="@(Model.SKU == "404")">404</option>
+                                </select>
+                            </div>
+                        }
+                        else if (Model.Platform == "NVL")
+                        {
+                            <!-- SKU filter for NVL -->
+                            <div class="d-flex align-items-center gap-1">
+                                <label class="form-label mb-0 text-nowrap" for="SkuFilter">
+                                    <i class="bi bi-tag me-1"></i>SKU
+                                </label>
+                                <select asp-for="SKU" id="SkuFilter" class="form-select form-select-sm"
+                                        style="width: 100px;" name="SKU" data-bs-toggle="tooltip" title="Filter by SKU">
+                                    <option value="ALL">ALL</option>
+                                    <option value="NVL-S" selected="@(Model.SKU == "NVL-S")">NVL-S</option>
+                                    <option value="NVL-G" selected="@(Model.SKU == "NVL-G")">NVL-G</option>
+                                    <option value="NVL-M" selected="@(Model.SKU == "NVL-M")">NVL-M</option>
+                                </select>
+                            </div>
+                        }
+
+                        <!-- Master Filter button moved next to Platform/SKU -->
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                data-bs-toggle="modal" data-bs-target="#masterFilterModal">
+                            <i class="bi bi-sliders me-1"></i>
+                            <span class="d-none d-md-inline">Master Filter</span>
+                            <span class="d-md-none">Filter</span>
+                        </button>
+                        @if (!string.IsNullOrWhiteSpace(Model.FilterOEM) || (Model.FilterFcsStatus != null && Model.FilterFcsStatus != "ALL") || (Model.FilterPanelFeatures != null && Model.FilterPanelFeatures.Count > 0) || !string.IsNullOrWhiteSpace(Model.Query) || !string.IsNullOrWhiteSpace(Model.AiQuery))
+                        {
+                            <a class="btn btn-outline-dark btn-sm" href="@Url.Page("/Index", new { Platform = Model.Platform, SKU = Model.SKU, Scope = Model.Scope, Query = (string?)null, AiQuery = (string?)null, FilterOEM = (string?)null, FilterFcsStatus = (string?)null, FilterPanelFeatures = (string[]?)null })" title="Clear all filters">
+                                <i class="bi bi-x-circle me-1"></i>
+                                <span class="d-none d-md-inline">Clear filters</span>
+                                <span class="d-md-none">Clear</span>
+                            </a>
+                        }
+                    </form>
+                </div>
+
+                <!-- Spacer -->
+                <div class="flex-grow-1"></div>
+
+                <!-- Actions Section -->
+                <div class="actions-section d-flex flex-wrap gap-2 align-items-center">
+                    @if (Model.Scope != "All")
+                    {
+                        <button type="button" class="btn btn-primary btn-sm"
+                                data-bs-toggle="modal" data-bs-target="#addDesignModal">
+                            <i class="bi bi-plus-circle me-1"></i>
+                            <span class="d-none d-sm-inline">Add Design</span>
+                            <span class="d-sm-none">Add</span>
+                        </button>
+
+                        <div id="uploadExcelTooltipAnchor" class="upload-excel-wrapper position-relative"
+                             data-bs-toggle="tooltip" data-bs-placement="bottom" title="Select designs to enable upload">
+                            <form id="uploadExcelForm" method="post" enctype="multipart/form-data" asp-page-handler="UploadExcel">
+                                <input type="hidden" name="Platform" value="@Model.Platform" />
+                                <input type="hidden" name="SKU" value="@Model.SKU" />
+                                <input type="hidden" name="Scope" value="@Model.Scope" />
+                                <label id="uploadExcelBtn" class="btn btn-outline-primary btn-sm mb-0 d-inline-flex align-items-center disabled text-nowrap" aria-disabled="true">
+                                    <i class="bi bi-cloud-upload me-1"></i>
+                                    <span class="d-none d-md-inline">Upload Excel</span>
+                                    <span class="d-md-none">Upload</span>
+                                    <input id="uploadExcelInput" type="file" name="ExcelFile" accept=".xlsx" style="display:none" disabled onchange="this.form.submit()" />
+                                </label>
+                            </form>
+
+                            <!-- Flashcard positioned relative to this wrapper -->
+                            <div id="flashcardOverlay" class="flashcard-overlay @(showUploadHint ? "show" : "")">
+                                <div class="flashcard @(showUploadHint ? "show" : "")">
+                                    <button type="button" class="flashcard-close" onclick="hideFlashcard()">&times;</button>
+                                    <h6 class="text-success mb-1">Success!</h6>
+                                    <p class="mb-3 small">Upload Excel now.</p>
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="hideFlashcard()">OK</button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(Model.TemplateUrl))
+                    {
+                        <a class="btn btn-outline-dark btn-sm text-nowrap" href="@Model.TemplateUrl" target="_blank" rel="noopener">
+                            <i class="bi bi-download me-1"></i>
+                            <span class="d-none d-md-inline">Download Template</span>
+                            <span class="d-md-none">Template</span>
+                        </a>
+                    }
+                    else
+                    {
+                        <form method="get" asp-page-handler="DownloadTemplate" class="d-inline">
+                            <button type="submit" class="btn btn-outline-dark btn-sm text-nowrap">
+                                <i class="bi bi-download me-1"></i>
+                                <span class="d-none d-md-inline">Download Template</span>
+                                <span class="d-md-none">Template</span>
+                            </button>
+                        </form>
+                    }
+
+                    <!-- Download Details button -->
+                    <a class="btn btn-success btn-sm text-nowrap"
+                       href="@Url.Page("/Index", "DownloadDetails", new { Platform = Model.Platform, SKU = Model.SKU, Scope = Model.Scope, Query = Model.Query, FilterOEM = Model.FilterOEM, FilterFcsStatus = Model.FilterFcsStatus, FilterPanelFeatures = Model.FilterPanelFeatures })">
+                        <i class="bi bi-file-earmark-excel me-1"></i>
+                        <span class="d-none d-lg-inline">Download Details as Excel</span>
+                        <span class="d-lg-none d-none d-md-inline">Download Excel</span>
+                        <span class="d-md-none">Download</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scope Tabs -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <ul class="nav nav-pills mb-3">
+                <li class="nav-item">
+                    @if (disableMyDesigns)
+                    {
+                        <span class="nav-link disabled text-muted">
+                            <i class="bi bi-person-circle me-2"></i>@Model.CurrentUserName'sDesigns
+                        </span>
+                    }
+                    else
+                    {
+                        <a class="nav-link @(Model.Scope == "MyDesigns" || string.IsNullOrWhiteSpace(Model.Scope) ? "active" : "")"
+                           href="?Scope=MyDesigns&Platform=@Model.Platform&SKU=@Model.SKU&Query=@Model.Query">
+                            <i class="bi bi-person-circle me-2"></i>@Model.CurrentUserName's Designs
+                        </a>
+                    }
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(Model.Scope == "All" ? "active" : "")"
+                       href="?Scope=All&Platform=@Model.Platform&SKU=@Model.SKU&Query=@Model.Query">
+                        <i class="bi bi-collection me-2"></i>All Designs
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Search bars row: existing keyword search + new AI search -->
+            <div class="row g-2 align-items-center">
+                <div class="col-md-6">
+                    <!-- Existing search bar -->
+                    <form method="get" asp-page-handler="Search" class="mb-0">
+                        <input type="hidden" name="Scope" value="@Model.Scope" />
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" placeholder="Search designs..." name="Query" value="@Model.Query" id="designSearchBox" />
+                            @if (!string.IsNullOrWhiteSpace(Model.Query))
+                            {
+                                <button class="btn btn-outline-secondary" type="button" title="Clear search" onclick="(function(){
+                                        var q=document.getElementById('designSearchBox'); if(q){ q.value=''; }
+                                        var url='@Url.Page("/Index", new { Platform = Model.Platform, SKU = Model.SKU, Scope = Model.Scope, Query = (string?)null })';
+                                        window.location.href=url;
+                                    })();">
+                                    <i class="bi bi-x-circle"></i> ✖
+                                </button>
+                            }
+                            <button class="btn btn-primary" type="submit">Search</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <!-- New AI/ search bar -->
+                    <form method="get" asp-page-handler="AiSearch" class="mb-0">
+                        <input type="hidden" name="Scope" value="@Model.Scope" />
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text"><i class="bi bi-stars"></i></span>
+                            <input type="text" class="form-control" placeholder="Ask e.g. 'panels with psr1 support'" name="AiQuery" value="@Model.AiQuery" id="aiSearchBox" />
+                            @if (!string.IsNullOrWhiteSpace(Model.AiQuery))
+                            {
+                                <button class="btn btn-outline-secondary" type="button" title="Clear AI query" onclick="(function(){
+                                        var q=document.getElementById('aiSearchBox'); if(q){ q.value=''; }
+                                        var url='@Url.Page("/Index", new { Platform = Model.Platform, SKU = Model.SKU, Scope = Model.Scope, AiQuery = (string?)null })';
+                                        window.location.href=url;
+                                    })();">
+                                    <i class="bi bi-x-circle"></i> ✖
+                                </button>
+                            }
+                            <button class="btn btn-dark" type="submit">AI Search</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <hr />
+        @* </div>
+            
+        <!-- Data Table Card -->
+        <div class="card"> *@
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        @if (Model.Scope != "All")
+                        {
+                            <th>
+                                <div class="form-check m-0">
+                                    <input type="checkbox" id="selectAllDesigns" class="form-check-input border border-dark" style="transform: scale(1.5); cursor: pointer;" />
+                                </div>
+                            </th>
+                        }
+                        <th><i class="bi bi-tag me-2"></i>Name</th>
+                        <th><i class="bi bi-cpu me-2"></i>Platform</th>
+                        <th><i class="bi bi-grid me-2"></i># Of Panels</th>
+                        <th><i class="bi bi-bookmark me-2"></i>SKU</th>
+                        <th><i class="bi bi-building me-2"></i>ODM</th>
+                        <th><i class="bi bi-building me-2"></i>OEM</th>
+                        <th>If</th>
+                        <th><i class="bi bi-calendar me-2"></i>FCS</th>
+                        @if (Model.Scope != "All")
+                        {
+                            <th class="text-center"><i class="bi bi-gear me-2"></i>Actions</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Designs.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-5">
+                                <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                                <div class="mt-2">No designs found</div>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var d in Model.Designs)
+                        {
+                            var hasMismatchIf = (Model.MismatchIfDesignIds ?? Model.MismatchDesignIds) != null && (Model.MismatchIfDesignIds ?? Model.MismatchDesignIds)!.Contains(d.Id);
+                            var hasMismatchFcs = Model.MismatchFcsDesignIds != null && Model.MismatchFcsDesignIds.Contains(d.Id);
+                            var hasMismatchDesignName = Model.MismatchDesignNameIds != null && Model.MismatchDesignNameIds.Contains(d.Id);
+                            <tr>
+                                @if (Model.Scope != "All")
+                                {
+                                    <td>
+                                        <div class="form-check">
+                                            <input type="checkbox" name="SelectedDesignIds" value="@d.Id" form="uploadExcelForm" class="form-check-input border border-dark" style="transform: scale(1.1); cursor: pointer;" />
+                                        </div>
+                                    </td>
+                                }
+                                <td>
+                                    <div class="d-flex justify-content-between align-items-center w-100">
+                                        <div>
+                                            <a asp-page="/Details" asp-route-designId="@d.Id" class="text-decoration-underline text-info fw-semibold">@d.Name</a>
+                                            @if (hasMismatchDesignName)
+                                            {
+                                                <span class="ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="Design name not found in CRTT.<br>This is a custom design name.">
+                                                    <i class="bi bi-info-circle text-info"></i>
+                                                </span>
+                                            }
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-secondary panel-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#panels-@d.Id" aria-expanded="false" aria-controls="panels-@d.Id" title="Show panels" aria-label="Show panels">
+                                            <svg class="chevron-icon" width="12" height="12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+                                                <path d="M1.5 5.5 8 12l6.5-6.5-1.4-1.4L8 9.2 2.9 4.1z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td><span class="badge text-bg-light">@d.Platform</span></td>
+                                <td><span class="badge text-bg-light">@d.NumberOfPanels</span></td>
+                                <td><span class="badge text-bg-light">@d.SKU</span></td>
+                                <td class="fw-medium">@d.ODM</td>
+                                <td class="fw-medium">@d.OEM</td>
+                                <td class="fw-medium">
+                                    @d.IF_
+                                    @if (hasMismatchIf)
+                                    {
+                                        <span class="ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="IF mismatch.<br>CRTT IF: @(Model.CrttIfByDesignId.ContainsKey(d.Id) ? Model.CrttIfByDesignId[d.Id] : "N/A")">
+                                            <i class="bi bi-info-circle text-warning"></i>
+                                        </span>
+                                    }
+                                </td>
+                                <td class="fw-medium">
+                                    @d.FCS
+                                    @if (hasMismatchFcs)
+                                    {
+                                        <span class="ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="FCS mismatch.<br>CRTT FCS: @(Model.CrttFcsByDesignId.ContainsKey(d.Id) ? Model.CrttFcsByDesignId[d.Id] : "N/A")">
+                                            <i class="bi bi-info-circle text-warning"></i>
+                                        </span>
+                                    }
+                                </td>
+                                @if (Model.Scope != "All")
+                                {
+                                    <td class="text-center" >
+                                        @{ 
+                                            // Check if FCS date has passed for this design
+                                            bool fcsPassed = false;
+                                            if (!string.IsNullOrWhiteSpace(d.FCS))
+                                            {
+                                                var cleanFcs = d.FCS.Trim();
+                                                var spaceIdx = cleanFcs.IndexOf(' ');
+                                                if (spaceIdx > 0) { cleanFcs = cleanFcs[..spaceIdx]; }
+                                                
+                                                if (DateTime.TryParseExact(cleanFcs,
+                                                    new[] { "dd-MM-yyyy", "MM-dd-yyyy", "yyyy-MM-dd" },
+                                                    System.Globalization.CultureInfo.InvariantCulture,
+                                                    System.Globalization.DateTimeStyles.None,
+                                                    out var parsedFcs))
+                                                {
+                                                    fcsPassed = parsedFcs < DateTime.Today;
+                                                }
+                                            }
+                                        }
+                                        
+                                        <div class="d-flex gap-1 justify-content-center flex-wrap">
+                                            @if (fcsPassed)
+                                            {
+                                                <a href="/PostMortem?DesignId=@d.Id" 
+                                                   class="btn btn-outline-warning btn-sm text-nowrap"
+                                                   data-bs-toggle="tooltip"
+                                                   title="Modify panel specifications after FCS">
+                                                    <i class="bi bi-wrench-adjustable-circle d-none d-lg-inline"></i>
+                                                    <span class="d-none d-md-inline">Post-Mortem</span>
+                                                    <i class="bi bi-wrench-adjustable-circle d-md-none"></i>
+                                                </a>
+                                            }
+
+                                            <form method="post" asp-page-handler="Delete" asp-route-id="@d.Id" class="d-inline" data-bs-toggle="tooltip" title="All panels for the design will be deleted!">
+                                                <input type="hidden" name="Platform" value="@Model.Platform" />
+                                                <input type="hidden" name="SKU" value="@Model.SKU" />
+                                                <input type="hidden" name="Scope" value="@Model.Scope" />
+                                                <button type="submit" class="btn btn-outline-danger btn-sm text-nowrap" title="Delete design" onclick="return confirm('Delete this design?');">
+                                                    <i class="bi bi-trash d-none d-lg-inline"></i>
+                                                    <span class="d-none d-md-inline">Delete</span>
+                                                    <i class="bi bi-trash d-md-none"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                }
+                            </tr>
+                            <tr class="collapse" id="panels-@d.Id">
+                                <td colspan="9" class="p-0">
+                                    @if (Model.PanelsByDesign.TryGetValue(d.Id, out var panels) && panels?.Count > 0)
+                                    {
+                                        <div class="p-3 bg-light">
+                                            <h6 class="fw-bold mb-3">Panel Details</h6>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm align-middle mb-0 bg-white">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th></th>
+                                                            <th>#</th>
+                                                            <th class="fw-semibold">Panel Vendor</th>
+                                                            <th class="fw-semibold">Tcon Vendor</th>
+                                                            @if (Model.Scope != "All")
+                                                            {
+                                                                <th class="fw-semibold">Part Number</th>
+                                                                <th class="fw-semibold">Phase</th>
+                                                                <th class="fw-semibold">EDID</th>
+                                                                <th class="fw-semibold">DPCD</th>
+                                                                <th class="fw-semibold">VBT</th>
+                                                                <th class="fw-semibold">Panel Spec</th>
+                                                                <th class="text-center fw-semibold"></th>
+                                                            }
+                                                            else
+                                                            {
+                                                                <th class="fw-semibold">Part Number</th>
+                                                            }
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @{var i = 1;}
+                                                        @foreach (var panel in panels)
+                                                        {
+                                                            <tr>
+                                                                <td></td>
+                                                                <td>@i</td>
+                                                                <td class="fw-medium">@panel.panel_vendor</td>
+                                                                <td class="fw-medium">@panel.tcon_vendor</td>
+
+                                                                @if (Model.Scope != "All")
+                                                                {
+                                                                    <td class="fw-medium">@(Model.PanelSpecsByPanelId.TryGetValue(panel.panel_id, out var specMy) ? specMy?.Panel_Part_Number : null)</td>
+                                                                    <td>
+                                                                        <select id="PhaseFilter-@panel.panel_id" class="form-select form-select-sm" style="min-width:100px" name="Phase">
+                                                                            <option value="EVT">EVT</option>
+                                                                            <option value="FVT">FVT</option>
+                                                                            <option value="SIT">SIT</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td>
+                                                                        <form method="post" enctype="multipart/form-data" asp-page-handler="UploadEdid">
+                                                                            <input type="hidden" name="DesignId" value="@d.Id" />
+                                                                            <input type="hidden" name="Platform" value="@d.Platform" />
+                                                                            <input type="hidden" name="SKU" value="@d.SKU" />
+                                                                            <input type="hidden" name="PanelVendor" value="@panel.panel_vendor" />
+                                                                            <input type="hidden" name="Phase" value="" data-phase-source-id="PhaseFilter-@panel.panel_id" />
+                                                                            <label class="btn btn-sm btn-outline-secondary text-nowrap" style="cursor: pointer;">
+                                                                                <i class="bi bi-upload d-lg-none"></i>
+                                                                                <span class="d-none d-lg-inline">Upload</span>
+                                                                                <input type="file" name="EdidFile" accept=".bin,.dat" style="display:none" onchange="(function(el){ var form = el.form; var hiddenPhase = form.querySelector('input[name=Phase]'); var srcId = hiddenPhase?.getAttribute('data-phase-source-id'); var sel = document.getElementById(srcId); if (hiddenPhase && sel) hiddenPhase.value = sel.value; form.submit(); })(this)" />
+                                                                            </label>
+                                                                        </form>
+                                                                    </td>
+                                                                    <td>
+                                                                        <form method="post" enctype="multipart/form-data" asp-page-handler="UploadDpcd">
+                                                                            <label class="btn btn-sm btn-outline-secondary text-nowrap" style="cursor: pointer;">
+                                                                                <i class="bi bi-upload d-lg-none"></i>
+                                                                                <span class="d-none d-lg-inline">Upload</span>
+                                                                                <input type="file" name="DpcdFile" accept=".txt" style="display:none" onchange="this.form.submit()" />
+                                                                            </label>
+                                                                        </form>
+                                                                    </td>
+                                                                    <td>
+                                                                        <form method="post" enctype="multipart/form-data" asp-page-handler="UploadVbt">
+                                                                            <label class="btn btn-sm btn-outline-secondary text-nowrap" style="cursor: pointer;">
+                                                                                <i class="bi bi-upload d-lg-none"></i>
+                                                                                <span class="d-none d-lg-inline">Upload</span>
+                                                                                <input type="file" name="VbtFile" accept=".bin,.dat" style="display:none" onchange="this.form.submit()" />
+                                                                            </label>
+                                                                        </form>
+                                                                    </td>
+                                                                    <td>
+                                                                        <form method="post" enctype="multipart/form-data" asp-page-handler="UploadSpec">
+                                                                            <label class="btn btn-sm btn-outline-secondary text-nowrap" style="cursor: pointer;">
+                                                                                <i class="bi bi-upload d-lg-none"></i>
+                                                                                <span class="d-none d-lg-inline">Upload</span>
+                                                                                <input type="file" name="SpecFile" accept=".pdf,.xlsx" style="display:none" onchange="this.form.submit()" />
+                                                                            </label>
+                                                                        </form>
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <form method="post" asp-page-handler="DeletePanel" asp-route-panelId="@panel.panel_id" class="d-inline">
+                                                                            <input type="hidden" name="Platform" value="@Model.Platform" />
+                                                                            <input type="hidden" name="SKU" value="@Model.SKU" />
+                                                                            <input type="hidden" name="Scope" value="@Model.Scope" />
+                                                                            <button type="submit" class="btn btn-outline-danger btn-sm text-nowrap" title="Delete panel" onclick="return confirm('Delete this panel?');">
+                                                                                <i class="bi bi-trash d-lg-none"></i>
+                                                                                <span class="d-none d-lg-inline"><i class="bi bi-trash me-1"></i>Delete</span>
+                                                                            </button>
+                                                                        </form>
+                                                                    </td>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <td class="fw-medium">@(Model.PanelSpecsByPanelId.TryGetValue(panel.panel_id, out var specAll) ? specAll?.Panel_Part_Number : null)</td>
+                                                                }
+                                                            </tr>
+                                                            i++;
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="p-3 text-center text-muted">No panels added for this design yet. Upload excel or add panels manually.</div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal for Master Filter -->
+    <div class="modal fade" id="masterFilterModal" tabindex="-1" aria-labelledby="masterFilterModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="masterFilterModalLabel"><i class="bi bi-sliders me-2"></i>Master Filter</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="get">
+                    <div class="modal-body">
+                        <input type="hidden" name="Scope" value="@Model.Scope" />
+                        <input type="hidden" name="Platform" value="@Model.Platform" />
+                        <input type="hidden" name="SKU" value="@Model.SKU" />
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="FilterOEM">Filter by OEM</label>
+                                @{
+                                    var hasCustomers = Model.AllowedCustomers?.Count > 0;
+                                }
+                                @if (hasCustomers)
+                                {
+                                    <input type="text" class="form-control" id="FilterOEM" name="FilterOEM" list="AllowedCustomersList"
+                                           placeholder="Type to select OEM" value="@Model.FilterOEM" autocomplete="off" />
+                                }
+                                else
+                                {
+                                    <input type="text" class="form-control" id="FilterOEM" name="FilterOEM" placeholder="OEM list unavailable" value="@Model.FilterOEM" />
+                                }
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="FilterFcsStatus">FCS Status</label>
+                                <select id="FilterFcsStatus" name="FilterFcsStatus" class="form-select">
+                                    <option value="ALL" selected="@(Model.FilterFcsStatus == null || Model.FilterFcsStatus == "ALL")">ALL</option>
+                                    <option value="Passed" selected="@(Model.FilterFcsStatus == "Passed")">Passed</option>
+                                    <option value="Upcoming" selected="@(Model.FilterFcsStatus == "Upcoming")">Upcoming</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label d-block">Panel Features</label>
+                                <div class="row row-cols-2 g-2">
+                                    @foreach (var feature in new[]{
+                                        "PSR1_Supported","PSR2_Supported","PSR2_ET_Supported","HDR_Supported","VRR_Supported","VDSC_Version","Seamless_Drrs","xPST_Supported","OPST_ELP","DE_Early_Wake","EPSM60","EG_Endurance_Gaming"
+                                    })
+                                    {
+                                        var isChecked = Model.FilterPanelFeatures != null && Model.FilterPanelFeatures.Contains(feature);
+                                        <div class="col">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="FilterPanelFeatures" value="@feature" id="feat-@feature" @(isChecked ? "checked" : null) />
+                                                <label class="form-check-label" for="feat-@feature">@feature.Replace("_"," ")</label>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Apply</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for adding a design -->
+    <div class="modal fade" id="addDesignModal" tabindex="-1" aria-labelledby="addDesignModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addDesignModalLabel"><i class="bi bi-plus-circle me-2"></i>Add New Design</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" asp-page-handler="CreateDesign">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="NewPlatform" class="form-label">Platform</label>
+                                <select class="form-select" id="NewPlatform" name="NewPlatform" required>
+                                    <option value="" selected disabled>Select platform</option>
+                                    <option value="PTL" selected="@(Model.Platform == "PTL")">PTL</option>
+                                    <option value="NVL" selected="@(Model.Platform == "NVL")">NVL</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="NewSKU" class="form-label">SKU</label>
+                                @if (Model.Platform == "PTL")
+                                {
+                                    <select class="form-select" id="NewSKU" name="NewSKU" required>
+                                        <option value="" disabled>Select SKU</option>
+                                        <option value="ALL" selected="@(Model.SKU == "ALL")">ALL</option>
+                                        <option value="12Xe" selected="@(Model.SKU == "12Xe")">12Xe</option>
+                                        <option value="4Xe" selected="@(Model.SKU == "4Xe")">4Xe</option>
+                                        <option value="404" selected="@(Model.SKU == "404")">404</option>
+                                    </select>
+                                }
+                                else if (Model.Platform == "NVL")
+                                {
+                                    <select class="form-select" id="NewSKU" name="NewSKU" required>
+                                        <option value="" disabled>Select SKU</option>
+                                        <option value="ALL" selected="@(Model.SKU == "ALL")">ALL</option>
+                                        <option value="NVL-S" selected="@(Model.SKU == "NVL-S")">NVL-S</option>
+                                        <option value="NVL-G" selected="@(Model.SKU == "NVL-G")">NVL-G</option>
+                                        <option value="NVL-M" selected="@(Model.SKU == "NVL-M")">NVL-M</option>
+                                    </select>
+                                }
+                                else
+                                {
+                                    <select class="form-select" id="NewSKU" name="NewSKU" required>
+                                        <option value="" disabled>Select SKU</option>
+                                        <option value="ALL" selected>ALL</option>
+                                    </select>
+                                }
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label for="NewOEM" class="form-label">OEM</label>
+                            @{
+                                var hasCustomers = Model.AllowedCustomers?.Count > 0;
+                            }
+                            @if (hasCustomers)
+                            {
+                                <input type="text" class="form-control" id="NewOEM" name="NewOEM" list="AllowedCustomersList" placeholder="Type to search and select" required autocomplete="off" />
+                                <datalist id="AllowedCustomersList">
+                                    @foreach (var customer in Model?.AllowedCustomers?.OrderBy(c => c) ?? Enumerable.Empty<string>())
+                                    {
+                                        <option value="@customer"></option>
+                                    }
+                                </datalist>
+                                <small class="text-muted">Start typing to pick an OEM from customers list.</small>
+                            }
+                            else
+                            {
+                                <input type="text" class="form-control" id="NewOEM" name="NewOEM" placeholder="Customer list unavailable" required disabled />
+                                <small class="text-muted">Open this page with network access to CRTT to load OEM suggestions.</small>
+                            }
+                        </div>
+                        <div class="mt-3">
+                            <label for="NewDesignName" class="form-label">Design Name</label>
+                            @{
+                                var hasPtl = Model?.AllowedDesignNamesPtl != null && Model?.AllowedDesignNamesPtl.Count > 0;
+                                var hasNvl = Model?.AllowedDesignNamesNvl != null && Model?.AllowedDesignNamesNvl.Count > 0;
+                            }
+                            @if (hasPtl || hasNvl)
+                            {
+                                <input type="text" class="form-control" id="NewDesignName" name="NewDesignName" list="@((Model?.Platform == "NVL") ? "AllowedNamesListNVL" : "AllowedNamesListPTL")" placeholder="Enter design name (CRTT suggestions available)" required autocomplete="off" />
+                                <datalist id="AllowedNamesListPTL">
+                                    @if (hasPtl)
+                                    {
+                                        foreach (var name in Model?.AllowedDesignNamesPtl ?? Enumerable.Empty<string>())
+                                        {
+                                            <option value="@name"></option>
+                                        }
+                                    }
+                                </datalist>
+                                <datalist id="AllowedNamesListNVL">
+                                    @if (hasNvl)
+                                    {
+                                        foreach (var name in Model?.AllowedDesignNamesNvl ?? Enumerable.Empty<string>())
+                                        {
+                                            <option value="@name"></option>
+                                        }
+                                    }
+                                </datalist>
+                                <small class="text-muted">Type to see CRTT design name suggestions, or enter a custom name.</small>
+                            }
+                            else
+                            {
+                                <input type="text" class="form-control" id="NewDesignName" name="NewDesignName" placeholder="Enter design name" required />
+                                <small class="text-muted">CRTT suggestions unavailable - network access required. You can still enter any design name.</small>
+                            }
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <input type="hidden" name="Scope" value="@Model?.Scope" />
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Design</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
